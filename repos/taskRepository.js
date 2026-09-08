@@ -1,41 +1,25 @@
-export async function getAllTasks() {
+const pool = require('../database');
 
+async function getAllTasks() {
     const result = await pool.query(
         `SELECT * FROM tasks`
     );
 
-    const tasks = result.rows;
-    return tasks;
-    res.json(tasks);
-
+    return result.rows;
 }
 
-export async function getTaskById(id) {
-    
+async function getTaskById(id) {
     const result = await pool.query(
-        `SELECT * FROM tasks WHERE id= $1`,
+        `SELECT * FROM tasks WHERE id = $1`,
         [id]
     );
 
-    const task = result.rows[0];
-
-    if (task) {
-        res.json(task);
-    }
-    else {
-        res.status(404).json({
-            error: `Task ${id} not found`
-        });
-    }
-
+    return result.rows[0] || null;
 }
 
-export async function createTask(title) {
-    
+async function createTask(title) {
     if (!title) {
-        return res.status(400).json({
-            error: 'Title is required.'
-        })
+        throw new Error("Title is required.");
     }
 
     const result = await pool.query(
@@ -43,76 +27,71 @@ export async function createTask(title) {
         [title, false]
     );
 
-    const newTask = result.rows[0];
-    res.status(201).json(newTask);
-
+    return result.rows[0];
 }
 
-export async function updateTask(id, title, done) {
-    
+async function updateTask(id, title, done) {
     const result = await pool.query(
-        `SELECT * FROM tasks WHERE id=$1`,
+        `SELECT * FROM tasks WHERE id = $1`,
         [id]
     );
 
     const task = result.rows[0];
 
     if (!task) {
-        return res.status(404).json({
-            error: "Task not found"
-        })
+        return null;
     }
 
     if (!title && done === undefined) {
-        return res.status(400).json({
-            error: 'Request Body cannot be empty.'
-        })
+        throw new Error("Request Body cannot be empty.");
     }
 
     if (title) {
         await pool.query(
-            `UPDATE tasks SET title= $1 WHERE id= $2`,
+            `UPDATE tasks SET title = $1 WHERE id = $2`,
             [title, id]
         );
     }
 
-    if (done != undefined) {
+    if (done !== undefined) {
         await pool.query(
-            `UPDATE tasks SET done=$1 WHERE id=$2`,
+            `UPDATE tasks SET done = $1 WHERE id = $2`,
             [done, id]
         );
     }
 
     const updateResult = await pool.query(
-        `SELECT * FROM tasks WHERE id= $1`,
+        `SELECT * FROM tasks WHERE id = $1`,
         [id]
     );
 
-    const updatedTask = updateResult.rows[0];
-    res.json(updatedTask); // displays updated task
-
+    return updateResult.rows[0];
 }
 
-export async function deleteTask() {
-    
+async function deleteTask(id) {
     const result = await pool.query(
-        `SELECT * FROM tasks WHERE id=$1`,
+        `SELECT * FROM tasks WHERE id = $1`,
         [id]
     );
 
     const task = result.rows[0];
 
     if (!task) {
-        return res.status(404).json({
-            error: `Task ${id} not found`
-        })
+        return null;
     }
 
     await pool.query(
-        `DELETE FROM tasks WHERE id= $1`,
+        `DELETE FROM tasks WHERE id = $1`,
         [id]
     );
 
-    res.sendStatus(204); // successful deletion, no response body
-
+    return true;
 }
+
+module.exports = {
+    getAllTasks,
+    getTaskById,
+    createTask,
+    updateTask,
+    deleteTask
+};

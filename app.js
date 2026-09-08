@@ -57,7 +57,7 @@ app.get('/health', (req, res) => {
 })
 
 app.get('/tasks', async (req, res) => {
-    taskRepository.getAllTasks();
+    await taskRepository.getAllTasks();
 })
 
 app.get('/tasks/:id', async (req, res) => {
@@ -67,7 +67,7 @@ app.get('/tasks/:id', async (req, res) => {
 
 app.post('/tasks', async (req, res) => {
     const title = req.body.title;
-    taskRepository.createTask();    
+    taskRepository.createTask();
 })
 
 app.put('/tasks/:id', async (req, res) => {
@@ -82,6 +82,32 @@ app.delete('/tasks/:id', async (req, res) => {
     const id = Number(req.params.id);
     taskRepository.deleteTask(id);
 })
+
+const { inputSchema, outputSchema } = require("./src/llm/schema");
+
+app.post("/todos/parse", async (req, res) => {
+    const parseResult = inputSchema.safeParse(req.body);
+    if (!parseResult.success) {
+        return res.status(400).json({
+            error: "Invalid input",
+            details: parseResult.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
+        });
+    }
+
+    // Stub mode check
+    if (process.env.LLM_STUB === "1") {
+        const stubResponse = {
+            title: parseResult.data.text.slice(0, 30),
+            priority: "medium",
+            category: "other",
+            confidence: 0.9,
+            reason: "Returned via stub mode",
+        };
+        return res.status(200).json(stubResponse);
+    }
+
+    return res.status(501).json({ error: "Not implemented yet" });
+});
 
 app.listen(port, () => {
     console.log(`Server Listening on http://127.0.0.1:${port}`)
