@@ -1,0 +1,10 @@
+[
+  { "id": 1, "input": "Pay electricity bill by tomorrow high priority", "expected_category": "finance" },
+  { "id": 2, "input": "Schedule team sync for project update", "expected_category": "work" },
+  { "id": 3, "input": "Buy running shoes and protein powder", "expected_category": "shopping" },
+  { "id": 4, "input": "Book dentist appointment for Friday morning", "expected_category": "health" },
+  { "id": 5, "input": "Call mom this evening", "expected_category": "personal" },
+  { "id": 6, "input": "Check random stuff on internet", "expected_category": "other" },
+  { "id": 7, "input": "Finish FlyRank backend assignment before deadline", "expected_category": "work" },
+  { "id": 8, "input": "Transfer money to savings account", "expected_category": "finance" }
+]
