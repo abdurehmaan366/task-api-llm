@@ -4,6 +4,10 @@ const swaggerDocument = require('./openapi.json');
 require("dotenv").config(); // to read .env file
 const { isEmpty, pool } = require('./database');    // must be after 'require("dotenv").config();'
 const taskRepository = require('./repos/taskRepository');
+const fs = require("fs");
+const path = require("path");
+const { runModelCall } = require("./src/llm/client");
+const { inputSchema, outputSchema } = require("./src/llm/schema");
 
 const app = express();
 const port = 3000;
@@ -83,30 +87,34 @@ app.delete('/tasks/:id', async (req, res) => {
     taskRepository.deleteTask(id);
 })
 
-const { inputSchema, outputSchema } = require("./src/llm/schema");
-
 app.post("/todos/parse", async (req, res) => {
-    const parseResult = inputSchema.safeParse(req.body);
-    if (!parseResult.success) {
-        return res.status(400).json({
-            error: "Invalid input",
-            details: parseResult.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
-        });
-    }
+  const parseResult = inputSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    return res.status(400).json({
+      error: "Invalid input",
+      details: parseResult.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
+    });
+  }
 
-    // Stub mode check
-    if (process.env.LLM_STUB === "1") {
-        const stubResponse = {
-            title: parseResult.data.text.slice(0, 30),
-            priority: "medium",
-            category: "other",
-            confidence: 0.9,
-            reason: "Returned via stub mode",
-        };
-        return res.status(200).json(stubResponse);
-    }
+  if (process.env.LLM_STUB === "1") {
+    return res.status(200).json({
+      title: parseResult.data.text.slice(0, 30),
+      priority: "medium",
+      category: "other",
+      confidence: 0.9,
+      reason: "Returned via stub mode",
+    });
+  }
 
-    return res.status(501).json({ error: "Not implemented yet" });
+  const promptPath = path.join(__dirname, "prompts/parse-todo-v1.md");
+  const promptText = fs.readFileSync(promptPath, "utf-8");
+
+  const result = await runModelCall(promptText, parseResult.data.text);
+
+  if (result.status === "fallback") return res.status(200).json(result.data);
+  if (result.status === "error") return res.status(result.code).json({ error: result.message });
+
+  return res.status(200).json(result.data);
 });
 
 app.listen(port, () => {
